@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>쇼핑 리스트</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    h1 {
+      font-size: 28px;
+      color: #1a1a2e;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .input-area {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .input-area input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-area input:focus {
+      border-color: #4a6cf7;
+    }
+
+    .input-area button {
+      padding: 12px 20px;
+      background: #4a6cf7;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .input-area button:hover {
+      background: #3a5ce5;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: #888;
+      padding: 0 4px;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+      padding: 14px 16px;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: opacity 0.2s, transform 0.2s;
+      animation: slideIn 0.25s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .item.checked {
+      opacity: 0.55;
+    }
+
+    .item .checkbox {
+      width: 22px;
+      height: 22px;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    .item .checkbox:hover {
+      border-color: #4a6cf7;
+    }
+
+    .item.checked .checkbox {
+      background: #4a6cf7;
+      border-color: #4a6cf7;
+    }
+
+    .item.checked .checkbox::after {
+      content: '';
+      width: 6px;
+      height: 10px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg) translate(-1px, -1px);
+    }
+
+    .item .name {
+      flex: 1;
+      font-size: 16px;
+      color: #333;
+      transition: all 0.2s;
+    }
+
+    .item.checked .name {
+      text-decoration: line-through;
+      color: #aaa;
+    }
+
+    .item .delete-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      color: #ccc;
+      font-size: 20px;
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .item .delete-btn:hover {
+      background: #fee;
+      color: #e74c3c;
+    }
+
+    .empty {
+      text-align: center;
+      color: #bbb;
+      padding: 48px 0;
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛒 쇼핑 리스트</h1>
+
+    <div class="input-area">
+      <input type="text" id="itemInput" placeholder="추가할 항목을 입력하세요" autofocus>
+      <button onclick="addItem()">추가</button>
+    </div>
+
+    <div class="stats" id="stats"></div>
+    <div class="list" id="list"></div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'shopping-list';
+
+    function load() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function save(items) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function render() {
+      const items = load();
+      const listEl = document.getElementById('list');
+      const statsEl = document.getElementById('stats');
+
+      if (items.length === 0) {
+        listEl.innerHTML = '<div class="empty">리스트가 비어 있습니다</div>';
+        statsEl.textContent = '';
+        return;
+      }
+
+      const checkedCount = items.filter(i => i.checked).length;
+      statsEl.innerHTML = `<span>총 ${items.length}개</span><span>완료 ${checkedCount}개</span>`;
+
+      listEl.innerHTML = items.map((item, idx) => `
+        <div class="item ${item.checked ? 'checked' : ''}">
+          <div class="checkbox" onclick="toggleItem(${idx})"></div>
+          <span class="name">${escapeHtml(item.name)}</span>
+          <button class="delete-btn" onclick="deleteItem(${idx})" title="삭제">&times;</button>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(text) {
+      const d = document.createElement('div');
+      d.textContent = text;
+      return d.innerHTML;
+    }
+
+    function addItem() {
+      const input = document.getElementById('itemInput');
+      const name = input.value.trim();
+      if (!name) return;
+
+      const items = load();
+      items.push({ name, checked: false });
+      save(items);
+      input.value = '';
+      input.focus();
+      render();
+    }
+
+    function toggleItem(idx) {
+      const items = load();
+      if (idx >= 0 && idx < items.length) {
+        items[idx].checked = !items[idx].checked;
+        save(items);
+        render();
+      }
+    }
+
+    function deleteItem(idx) {
+      const items = load();
+      if (idx >= 0 && idx < items.length) {
+        items.splice(idx, 1);
+        save(items);
+        render();
+      }
+    }
+
+    document.getElementById('itemInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addItem();
+    });
+
+    render();
+  </script>
+</body>
+</html>
